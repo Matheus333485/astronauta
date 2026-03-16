@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Astronauta & Foguete — Condição Interativa</title>
+  <style>
+    :root{
+      --bg:#0b1020;/* espaço */
+      --card:#161d36;
+      --text:#e6ecff;
+      --muted:#99a3c4;
+      --accent:#7aa2ff;
+      --good:#00d084;
+      --bad:#ff4d4f;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      min-height:100svh;
+      background:
+        radial-gradient(1400px 800px at 80% 10%, #162044 0%, transparent 60%),
+        radial-gradient(1000px 600px at 20% 80%, #111836 0%, transparent 55%),
+        var(--bg);
+      color:var(--text);
+      font:500 16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
+      display:grid;place-items:center;padding:24px
+    }
+    .app{
+      width:min(980px, 100%);
+      display:grid;gap:16px
+    }
+    header{display:flex;align-items:center;justify-content:space-between;gap:16px}
+    h1{font-size:clamp(20px,2.8vw,28px);margin:0}
+    .hint{color:var(--muted);font-size:14px}
+
+    .panel{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
+      padding:16px 16px;border-radius:16px;backdrop-filter:saturate(120%) blur(4px)}
+    .routebar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .pill{display:inline-block;padding:8px 12px;border:1px solid rgba(255,255,255,.12);border-radius:999px;text-decoration:none;color:var(--text)}
+    .pill.active{background:#1a2246;border-color:#2a3a8a}
+    .routebar .hint{margin-left:auto}
+
+    /* Temas de planeta */
+    body.terra{background:
+        radial-gradient(1400px 800px at 80% 10%, #162044 0%, transparent 60%),
+        radial-gradient(1000px 600px at 20% 80%, #111836 0%, transparent 55%),
+        var(--bg)}
+    body.marte{background:
+        radial-gradient(1400px 800px at 80% 10%, #3b1420 0%, transparent 60%),
+        radial-gradient(1000px 600px at 20% 80%, #2a0f16 0%, transparent 55%),
+        #14070b}
+    body.marte .ground{background: radial-gradient(120% 140px at 50% 0, #3c0f14 0%, #2b0b0e 60%, #21080a 100%)}
+    body.marte .rocket .window{background:#4e0920}
+    body.marte .lego-plate{background:#4e0920}
+    
+
+    .controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+    button{appearance:none;border:0;border-radius:12px;padding:12px 16px;font-weight:700;cursor:pointer;
+      background:linear-gradient(180deg, #2a3a8a, #1f2c66);color:#fff;box-shadow:0 6px 18px rgba(0,0,0,.4)}
+    button.secondary{background:linear-gradient(180deg,#394461,#242a3a)}
+    button:disabled{opacity:.6;cursor:not-allowed}
+
+    .readout{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+    .badge{padding:8px 12px;border-radius:999px;background:#19203c;border:1px solid rgba(255,255,255,.08)}
+    .status{font-weight:800}
+    .status.ok{color:var(--good)}
+    .status.stop{color:var(--bad)}
+
+    .meter{flex:1;min-width:220px;height:14px;border-radius:999px;background:#101735;border:1px solid rgba(255,255,255,.08);overflow:hidden}
+    .bar{height:100%;width:0%;background:linear-gradient(90deg,#1ad1ff,#7aa2ff);transition:width .15s ease}
+
+    /* Cena */
+    .scene{position:relative;isolation:isolate; height:380px;border-radius:20px;overflow:hidden}
+    .stars{position:absolute;inset:0;will-change:transform}
+    .stars-far{ background:
+      radial-gradient(2px 2px at 10% 20%, #fff 40%, transparent 41%),
+      radial-gradient(1.5px 1.5px at 30% 60%, #fff 40%, transparent 41%),
+      radial-gradient(2px 2px at 60% 30%, #fff 40%, transparent 41%),
+      radial-gradient(1.5px 1.5px at 80% 70%, #fff 40%, transparent 41%),
+      radial-gradient(1.2px 1.2px at 50% 85%, #fff 40%, transparent 41%),
+      radial-gradient(1.2px 1.2px at 15% 85%, #fff 40%, transparent 41%);
+      opacity:.45;animation: twinkle 6s linear infinite}
+    .stars-mid{ background:
+      radial-gradient(2px 2px at 15% 10%, #fff 45%, transparent 46%),
+      radial-gradient(2px 2px at 40% 40%, #fff 45%, transparent 46%),
+      radial-gradient(2px 2px at 70% 30%, #fff 45%, transparent 46%),
+      radial-gradient(2px 2px at 85% 65%, #fff 45%, transparent 46%);
+      opacity:.6;animation: twinkle 5s linear infinite}
+    .stars-near{ background:
+      radial-gradient(2.5px 2.5px at 20% 30%, #fff 50%, transparent 51%),
+      radial-gradient(2.5px 2.5px at 55% 50%, #fff 50%, transparent 51%),
+      radial-gradient(2.5px 2.5px at 75% 20%, #fff 50%, transparent 51%),
+      radial-gradient(3px 3px at 90% 80%, #fff 50%, transparent 51%);
+      opacity:.8;animation: twinkle 4s linear infinite}
+    #streaks{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .25s ease}
+    #streaks::before,#streaks::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg, rgba(255,255,255,.0) 0px, rgba(255,255,255,.0) 18px, rgba(255,255,255,.25) 19px, rgba(255,255,255,.25) 20px), repeating-linear-gradient(180deg, rgba(255,255,255,.0) 0px, rgba(255,255,255,.0) 36px, rgba(255,255,255,.12) 37px, rgba(255,255,255,.12) 38px);filter:blur(1px);mix-blend-mode:screen}
+    @keyframes twinkle{to{transform:translateY(-10px)}}
+
+    .ground{position:absolute;inset:auto 0 0 0;height:120px;background:
+      radial-gradient(120% 140px at 50% 0, #0a122b 0%, #080d1e 60%, #060a16 100%);
+      border-top:1px solid rgba(255,255,255,.06)
+    }
+
+    /* Astronauta LEGO (CSS puro) */
+    .astro{position:absolute;left:40px;bottom:120px;width:88px;height:120px;transition:transform .9s ease,left .9s ease,bottom .9s ease}
+    /* proporções de minifig */
+    .lego-head{position:absolute;left:26px;top:0;width:36px;height:28px;background:#ffd55c;border:2px solid #c9a13d;border-radius:6px}
+    .lego-head::after{content:"";position:absolute;left:12px;top:-8px;width:12px;height:8px;background:#ffd55c;border:2px solid #c9a13d;border-bottom:0;border-radius:4px 4px 0 0}
+    .lego-face{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+    .lego-eye{width:4px;height:4px;background:#1c1b29;border-radius:50%;margin:0 6px}
+    .lego-smile{position:absolute;bottom:7px;left:50%;width:14px;height:8px;border:2px solid #1c1b29;border-top:0;border-radius:0 0 10px 10px;transform:translateX(-50%)}
+
+    .lego-torso{position:absolute;left:18px;top:28px;width:52px;height:46px;background:#e3ecff;border:2px solid #7a89bd;border-radius:8px}
+    .lego-plate{position:absolute;left:24px;top:44px;width:40px;height:12px;background:#1c2a56;border:2px solid #7a89bd;border-radius:6px}
+    .lego-tank{position:absolute;left:8px;top:38px;width:18px;height:36px;background:#8aa0d9;border:2px solid #566aa3;border-radius:6px}
+
+    .lego-arm{position:absolute;top:36px;width:16px;height:32px;background:#e3ecff;border:2px solid #7a89bd;border-radius:12px;transform-origin:top center}
+    .lego-arm.l{left:6px;transform:rotate(20deg)}
+    .lego-arm.r{right:6px;transform:rotate(-22deg)}
+    .lego-hand{position:absolute;bottom:-8px;left:50%;width:16px;height:16px;background:#ffd55c;border:2px solid #c9a13d;border-radius:50%;transform:translateX(-50%)}
+    .lego-hand::after{content:"";position:absolute;left:2px;top:2px;width:12px;height:12px;border:2px solid #c9a13d;border-left:0;border-top:0;border-bottom:0;border-radius:50%}
+
+    .lego-hip{position:absolute;left:18px;top:72px;width:52px;height:16px;background:#cfd8ff;border:2px solid #7a89bd;border-radius:6px}
+    .lego-leg{position:absolute;top:86px;width:22px;height:34px;background:#cfd8ff;border:2px solid #7a89bd;border-radius:6px}
+    .lego-leg.l{left:22px}
+    .lego-leg.r{left:44px}
+
+    /* Foguete (CSS puro) */
+    .rocket{position:absolute;left:65%;bottom:120px;width:90px;height:200px;transform-origin:center;transition: transform .6s ease}
+    .rocket .body{position:absolute;left:18px;top:26px;width:54px;height:120px;background:#f2f5ff;border:2px solid #7a89bd;border-radius:10px}
+    .rocket .nose{position:absolute;left:18px;top:-2px;width:54px;height:50px;background:linear-gradient(180deg,#e1e8ff,#b9c8ff);border:2px solid #7a89bd;border-bottom:0;border-radius:16px 16px 6px 6px}
+    .rocket .window{position:absolute;left:34px;top:42px;width:26px;height:26px;background:#1c2a56;border:2px solid #7a89bd;border-radius:50%}
+    .rocket .fin{position:absolute;bottom:20px;width:28px;height:34px;background:#d0d8ff;border:2px solid #7a89bd;border-radius:6px}
+    .rocket .fin.l{left:-6px; transform:skewY(10deg)}
+    .rocket .fin.r{right:-6px; transform:skewY(-10deg)}
+    .flame{position:absolute;left:34px;bottom:-18px;width:22px;height:28px;background:radial-gradient(closest-side,#ffd166 55%,transparent 56%),
+      radial-gradient(closest-side,#ff7a59 45%,transparent 46%),
+      radial-gradient(closest-side,#ff3b2f 35%,transparent 36%);
+      filter:blur(0.3px);border-radius:14px 14px 18px 18px;transform-origin:top center;opacity:0}
+    .flame.on{animation:fire .25s ease-in-out infinite alternate;opacity:1}
+    @keyframes fire{from{transform:scaleY(.8) translateY(2px)}to{transform:scaleY(1.15) translateY(0)}}
+
+    /* Estados */
+    .docked .astro{left:calc(65% + 10px); bottom:200px; transform:scale(.92) rotate(-6deg)}
+    .zoom .rocket{transform:translateY(-40px) rotate(-2deg)}
+
+    /* Legendas/condição */
+    .logic{display:grid;gap:6px;font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;font-size:14px}
+    .logic code{background:#101735;border:1px solid rgba(255,255,255,.08);padding:8px 10px;border-radius:10px;display:block}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Condição: "se o astronauta pegar o foguete"</h1>
+      <div class="hint">Clique em <b>Pegar foguete</b> para ver a velocidade subir até <b>200 km/h</b>.</div>
+    </header>
+
+    <section class="panel routebar" aria-label="Rotas (SPA)">
+      <strong style="margin-right:8px">Rotas:</strong>
+      <a href="#/terra" class="pill">Terra</a>
+      <a href="#/decolagem" class="pill">Decolagem</a>
+      <a href="#/cruzeiro" class="pill">Cruzeiro</a>
+      <a href="#/marte" class="pill">Marte</a>
+      <span class="hint" id="routeHint" style="margin-left:auto">Rota atual: /terra</span>
+    </section>
+
+    <section class="panel controls">
+      <div class="readout">
+        <span class="badge">Velocidade: <b id="speed">0</b> km/h</span>
+        <span class="badge">Estado: <b id="state" class="status stop">PARADO</b></span>
+        <div class="meter" aria-label="medidor de velocidade"><div id="bar" class="bar"></div></div>
+      </div>
+      <div style="flex:1"></div>
+      <button id="btnPick">🚀 Pegar foguete</button>
+      <button id="btnRelease" class="secondary">🧑‍🚀 Soltar</button>
+      <button id="btnReset" class="secondary" title="Zerar para 0 e trazer astronauta de volta">↺ Reset</button>
+    </section>
+
+    <section id="scene" class="panel scene">
+      <div class="stars stars-far"></div>
+      <div class="stars stars-mid"></div>
+      <div class="stars stars-near"></div>
+      <div id="streaks" aria-hidden="true"></div>
+      <div class="rocket" aria-label="foguete">
+        <div class="nose"></div>
+        <div class="body"></div>
+        <div class="window"></div>
+        <div class="fin l"></div>
+        <div class="fin r"></div>
+        <div id="flame" class="flame"></div>
+      </div>
+      <div class="astro" aria-label="astronauta LEGO">
+        <div class="lego-tank"></div>
+        <div class="lego-head">
+          <div class="lego-face">
+            <span class="lego-eye"></span>
+            <span class="lego-eye"></span>
+            <span class="lego-smile"></span>
+          </div>
+        </div>
+        <div class="lego-torso"></div>
+        <div class="lego-plate"></div>
+        <div class="lego-arm l"><div class="lego-hand"></div></div>
+        <div class="lego-arm r"><div class="lego-hand"></div></div>
+        <div class="lego-hip"></div>
+        <div class="lego-leg l"></div>
+        <div class="lego-leg r"></div>
+      </div>
+      <div class="ground"></div>
+    </section>
+
+    <section class="panel logic" aria-label="ilustração da regra lógica">
+      <span>Regra que estamos ilustrando:</span>
+      <code>
+        se (astronautaPegaFoguete) {
+          velocidade = aumentaGradualmenteAté(200);
+        } else {
+          velocidade = 0;
+        }
+      </code>
+    </section>
+  </div>
+
+  <script>
+    // --------- Estado e utilitários ---------
+    const MAX_SPEED = 200; // km/h
+    const ACCEL_PER_TICK = 4; // incremento por "tick" (~50ms) => 2.4s até 200
+    const TICK_MS = 50;
+
+    let speed = 0;
+    let accelerating = false;
+    let timer = null;
+
+    // --------- Referências de UI ---------
+    const $speed = document.getElementById('speed');
+    const $state = document.getElementById('state');
+    const $bar   = document.getElementById('bar');
+    const $flame = document.getElementById('flame');
+
+    const $btnPick = document.getElementById('btnPick');
+    const $btnRelease = document.getElementById('btnRelease');
+    const $btnReset = document.getElementById('btnReset');
+
+    const $scene = document.getElementById('scene');
+
+    function updateUI(){
+      $speed.textContent = Math.round(speed);
+      $bar.style.width = (speed / MAX_SPEED * 100) + '%';
+      if(speed > 0){
+        $state.textContent = 'ACELERANDO';
+        $state.classList.remove('stop');
+        $state.classList.add('ok');
+      } else {
+        $state.textContent = 'PARADO';
+        $state.classList.add('stop');
+        $state.classList.remove('ok');
+      }
+    }
+
+    function startAcceleration(){
+      if(accelerating) return;
+      accelerating = true;
+      clearInterval(timer);
+      timer = setInterval(()=>{
+        speed = Math.min(MAX_SPEED, speed + ACCEL_PER_TICK);
+        updateUI();
+        if(speed >= MAX_SPEED){
+          stopAcceleration();
+        }
+      }, TICK_MS);
+      $flame.classList.add('on');
+      $scene.classList.add('zoom');
+    }
+
+    function stopAcceleration(){
+      accelerating = false;
+      clearInterval(timer);
+      timer = null;
+      $flame.classList.remove('on');
+      $scene.classList.remove('zoom');
+    }
+
+    function setDocked(docked){
+      if(docked){
+        // Astronauta "pega" o foguete
+        $scene.classList.add('docked');
+        // Começa a acelerar suavemente até 200
+        startAcceleration();
+      }else{
+        // Solta -> velocidade zera
+        $scene.classList.remove('docked');
+        stopAcceleration();
+        speed = 0;
+        updateUI();
+      }
+    }
+
+    // --------- Botões ---------
+    $btnPick.addEventListener('click', ()=> setDocked(true));
+    $btnRelease.addEventListener('click', ()=> setDocked(false));
+    $btnReset.addEventListener('click', ()=>{
+      setDocked(false);
+      // reposicionar visual já está cuidado por setDocked(false)
+    });
+
+    // Estado inicial
+    updateUI();
+      // --------- Parallax do espaço (passagem do cenário) ---------
+    const $far = document.querySelector('.stars-far');
+    const $mid = document.querySelector('.stars-mid');
+    const $near = document.querySelector('.stars-near');
+    const $streaks = document.getElementById('streaks');
+
+    let xFar = 0, xMid = 0, xNear = 0; // deslocamentos
+    let lastT = performance.now();
+
+    function animateSpace(t){
+      const dt = (t - lastT) / 1000; // segundos
+      lastT = t;
+      // conversão simples: 1 km/h ≈ 0.8 px/s (ajuste livre para ficar bonito)
+      const pxPerSec = speed * 0.8;
+      // camadas se movem em velocidades diferentes (parallax)
+      xFar -= pxPerSec * 0.02 * dt;   // mais distante
+      xMid -= pxPerSec * 0.06 * dt;   // médio
+      xNear -= pxPerSec * 0.12 * dt;  // mais próximo
+
+      const wrap = (v) => (v % 1000);
+      $far.style.transform = `translateX(${wrap(xFar)}px)`;
+      $mid.style.transform = `translateX(${wrap(xMid)}px)`;
+      $near.style.transform = `translateX(${wrap(xNear)}px)`;
+
+      const intensity = Math.max(0, (speed - 80) / 120); // 0..1
+      $streaks.style.opacity = intensity.toFixed(3);
+
+      requestAnimationFrame(animateSpace);
+    }
+
+    requestAnimationFrame(animateSpace);
+      // --------- Mini Router (rotas SPA via hash) ---------
+    const routes = {
+      '/terra': () => {
+        document.body.classList.add('terra');
+        document.body.classList.remove('marte');
+        setDocked(false); // parado na base
+        speed = 0; updateUI();
+        document.querySelector('.ground').style.display = 'block';
+      },
+      '/decolagem': () => {
+        document.body.classList.add('terra');
+        document.body.classList.remove('marte');
+        setDocked(true); // astronauta pega o foguete
+        // acelera até ~80 km/h e mantém
+        targetSpeed(80);
+        document.querySelector('.ground').style.display = 'block';
+      },
+      '/cruzeiro': () => {
+        document.body.classList.add('terra');
+        document.body.classList.remove('marte');
+        setDocked(true);
+        targetSpeed(150); // cruzeiro espacial
+        document.querySelector('.ground').style.display = 'none';
+      },
+      '/marte': () => {
+        document.body.classList.remove('terra');
+        document.body.classList.add('marte');
+        // aproximação -> desacelera até 0 e pousa
+        setDocked(true);
+        targetSpeed(20, () => { setDocked(false); });
+        document.querySelector('.ground').style.display = 'block';
+      }
+    };
+
+    // Atualiza UI das pílulas
+    function setActivePill(path){
+      document.querySelectorAll('.pill').forEach(a=>{
+        a.classList.toggle('active', a.getAttribute('href') === '#' + path);
+      });
+      document.getElementById('routeHint').textContent = 'Rota atual: ' + path;
+    }
+
+    function navigate(path){
+      (routes[path]||routes['/terra'])();
+      setActivePill(path);
+    }
+
+    window.addEventListener('hashchange', ()=>{
+      const path = location.hash.slice(1) || '/terra';
+      navigate(path);
+    });
+
+    // --------- Endpoints (mock) ---------
+    // Simulação de API para demonstrar endpoints sem servidor
+    async function api(url, opts={}){
+      const method = (opts.method||'GET').toUpperCase();
+      if(url === '/api/status' && method==='GET'){
+        return {json: async()=>({speed, route: location.hash.slice(1)||'/terra', docked: accelerating})};
+      }
+      if(url === '/api/rota' && method==='GET'){
+        return {json: async()=>({route: location.hash.slice(1)||'/terra'})};
+      }
+      if(url === '/api/rota' && method==='POST'){
+        const body = JSON.parse(opts.body||'{}');
+        if(body.path){ location.hash = '#' + body.path; }
+        return {json: async()=>({ok:true, route: body.path})};
+      }
+      throw new Error('Endpoint não encontrado: '+url);
+    }
+
+    // Helper: acelera/desacelera até um alvo e depois chama cb
+    function targetSpeed(goal, cb){
+      const tick = setInterval(()=>{
+        if(Math.abs(speed - goal) < 2){ speed = goal; updateUI(); clearInterval(tick); if(cb) cb(); return; }
+        speed += (speed < goal ? 6 : -6);
+        speed = Math.max(0, Math.min(MAX_SPEED, speed));
+        updateUI();
+      }, 60);
+    }
+
+    // Inicializa rota a partir do hash
+    navigate(location.hash.slice(1) || '/terra');
+
+    // Exemplos de uso dos endpoints "fake":
+    // api('/api/status').then(r=>r.json()).then(console.log);
+    // api('/api/rota', {method:'POST', body: JSON.stringify({path: '/cruzeiro'})});
+  </script>
+</body>
+</html>
