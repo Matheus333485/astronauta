@@ -1,5 +1,5 @@
 # 🚀 Astronauta LEGO Space Mission
-
+https://glittery-cassata-999be8.netlify.app/
 Projeto interativo em HTML, CSS e JavaScript que simula uma missão espacial com um astronauta estilo LEGO.
 
 O astronauta pode entrar no foguete, acelerar pelo espaço e viajar da Terra até Marte.
